@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DeFi Guardian — Autonomous AI Monitoring Agent</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡</text></svg>"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#03080f;--bg2:#060e1a;--bg3:#091525;
+  --panel:#0b1a2e;--panel2:#0f2040;
+  --border:rgba(0,210,255,0.1);--border2:rgba(0,210,255,0.22);
+  --cyan:#00d2ff;--cyan2:#00ffb3;--amber:#ffb300;
+  --red:#ff3d5a;--green:#00e676;--violet:#b47dff;
+  --text:#c8e6f5;--muted:#3a6080;--dim:#1e3a55;
+  --glow-c:0 0 24px rgba(0,210,255,0.3);
+  --glow-r:0 0 24px rgba(255,61,90,0.4);
+  --glow-g:0 0 24px rgba(0,230,118,0.3);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;font-size:14px;}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospace;min-height:100vh;overflow-x:hidden;}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.025) 2px,rgba(0,0,0,0.025) 4px);}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background-image:radial-gradient(ellipse 80% 60% at 20% 0%,rgba(0,210,255,0.05) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 100%,rgba(0,255,179,0.04) 0%,transparent 60%);}
+.app-wrapper{position:relative;z-index:1;display:flex;flex-direction:column;min-height:100vh;}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;gap:1rem;padding:.75rem 1.5rem;background:rgba(3,8,15,0.97);border-bottom:1px solid var(--border2);backdrop-filter:blur(20px);position:sticky;top:0;z-index:100;}
+.topbar-logo{display:flex;align-items:center;gap:.6rem;font-family:'Orbitron',monospace;font-weight:900;font-size:1rem;color:var(--cyan);letter-spacing:.08em;flex-shrink:0;}
+.shield-icon{width:30px;height:30px;background:linear-gradient(135deg,var(--cyan),var(--cyan2));clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);display:flex;align-items:center;justify-content:center;animation:shieldPulse 3s ease-in-out infinite;font-size:.75rem;}
+@keyframes shieldPulse{0%,100%{filter:drop-shadow(0 0 4px rgba(0,210,255,0.4))}50%{filter:drop-shadow(0 0 12px rgba(0,210,255,0.8))}}
+.agent-status-bar{display:flex;align-items:center;gap:.5rem;background:rgba(0,230,118,0.06);border:1px solid rgba(0,230,118,0.2);border-radius:4px;padding:.3rem .8rem;font-size:.7rem;color:var(--green);letter-spacing:.1em;}
+.pulse-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulseDot 1.2s infinite;}
+@keyframes pulseDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.8)}}
+.topbar-right{display:flex;align-items:center;gap:.8rem;margin-left:auto;}
+.block-ticker{font-size:.7rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;}
+.block-ticker .bval{color:var(--cyan);}
+#walletBtn{background:linear-gradient(135deg,var(--cyan),var(--cyan2));color:#000;border:none;padding:.45rem 1.1rem;font-family:'Orbitron',monospace;font-weight:700;font-size:.65rem;border-radius:4px;cursor:pointer;letter-spacing:.06em;transition:transform .15s,box-shadow .15s;}
+#walletBtn:hover{transform:translateY(-1px);box-shadow:var(--glow-c);}
+#walletBtn.connected{background:linear-gradient(135deg,var(--green),var(--cyan2));}
+#walletAddrDisplay{font-size:.68rem;color:var(--cyan2);display:none;}
+#walletAddrDisplay.show{display:block;}
+
+/* LAYOUT */
+.main-layout{display:flex;flex:1;min-height:0;}
+
+/* SIDEBAR */
+.sidebar{width:52px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:.8rem 0;gap:.3rem;position:sticky;top:53px;height:calc(100vh - 53px);overflow:hidden;flex-shrink:0;transition:width .3s;}
+.sidebar.expanded{width:190px;align-items:flex-start;padding-left:.7rem;}
+.sidebar-toggle{width:36px;height:36px;border-radius:4px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:1rem;display:flex;align-items:center;justify-content:center;transition:color .2s;margin-bottom:.4rem;flex-shrink:0;}
+.sidebar-toggle:hover{color:var(--cyan);}
+.nav-item{width:36px;height:36px;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;background:none;border:none;color:var(--muted);transition:all .2s;position:relative;flex-shrink:0;}
+.nav-item:hover,.nav-item.active{color:var(--cyan);background:rgba(0,210,255,0.08);}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:20px;background:var(--cyan);border-radius:0 2px 2px 0;}
+.nav-label-tip{display:none;position:absolute;left:48px;background:var(--panel);border:1px solid var(--border2);border-radius:4px;padding:.3rem .7rem;font-size:.68rem;white-space:nowrap;color:var(--text);pointer-events:none;z-index:200;}
+.sidebar:not(.expanded) .nav-item:hover .nav-label-tip{display:block;}
+.nav-badge{position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:var(--red);font-size:.5rem;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;}
+
+/* CONTENT */
+.content{flex:1;overflow-y:auto;padding:1.5rem;min-width:0;}
+.page{display:none;}.page.active{display:block;}
+
+/* SECTION HEADER */
+.sec-header{display:flex;align-items:center;gap:.8rem;margin-bottom:1.5rem;flex-wrap:wrap;}
+.sec-title{font-family:'Orbitron',monospace;font-weight:700;font-size:1.1rem;color:var(--text);letter-spacing:.04em;}
+.sec-badge{font-size:.6rem;padding:.2rem .6rem;border-radius:2px;background:rgba(0,210,255,0.1);color:var(--cyan);letter-spacing:.1em;text-transform:uppercase;}
+.sec-badge.live{background:rgba(0,230,118,0.1);color:var(--green);}
+.sec-badge.alert-badge{background:rgba(255,61,90,0.1);color:var(--red);}
+
+/* GRIDS */
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;}
+.grid-2-1{display:grid;grid-template-columns:2fr 1fr;gap:1rem;margin-bottom:1.5rem;}
+
+/* METRIC CARD */
+.metric-card{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:1rem 1.2rem;transition:border-color .2s,box-shadow .2s;position:relative;overflow:hidden;}
+.metric-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:0;transition:opacity .3s;}
+.metric-card:hover::before{opacity:1;}
+.metric-card:hover{border-color:var(--border2);}
+.mc-label{font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem;}
+.mc-val{font-family:'Orbitron',monospace;font-size:1.5rem;font-weight:700;line-height:1;}
+.mc-val.c-cyan{color:var(--cyan);}
+.mc-val.c-green{color:var(--green);}
+.mc-val.c-amber{color:var(--amber);}
+.mc-val.c-red{color:var(--red);}
+.mc-val.c-violet{color:var(--violet);}
+.mc-sub{font-size:.65rem;color:var(--muted);margin-top:.4rem;}
+.mc-change{font-size:.65rem;margin-top:.3rem;}
+.mc-change.up{color:var(--green);}
+.mc-change.dn{color:var(--red);}
+
+/* PANEL */
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:1.2rem;margin-bottom:1.5rem;}
+.panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;padding-bottom:.8rem;border-bottom:1px solid var(--border);}
+.panel-title{font-family:'Orbitron',monospace;font-size:.78rem;color:var(--text);letter-spacing:.06em;}
+
+/* RISK GAUGE */
+.risk-gauge-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:.5rem 0;}
+.risk-gauge{position:relative;width:130px;height:70px;overflow:hidden;}
+.risk-gauge svg{width:130px;height:130px;position:relative;top:-60px;}
+.risk-label{text-align:center;margin-top:.5rem;}
+.risk-label .rval{font-family:'Orbitron',monospace;font-size:1.4rem;font-weight:700;}
+.risk-label .rtxt{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+
+/* ALERT FEED */
+.alert-feed{max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:.5rem;}
+.alert-feed::-webkit-scrollbar{width:3px;}
+.alert-feed::-webkit-scrollbar-thumb{background:var(--dim);}
+.alert-item{display:flex;align-items:flex-start;gap:.8rem;padding:.65rem .85rem;border-radius:4px;border-left:3px solid;font-size:.72rem;background:rgba(255,255,255,0.02);animation:slideIn .3s ease;}
+@keyframes slideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+.alert-item.critical{border-left-color:var(--red);background:rgba(255,61,90,0.05);}
+.alert-item.warning{border-left-color:var(--amber);background:rgba(255,179,0,0.04);}
+.alert-item.info{border-left-color:var(--cyan);background:rgba(0,210,255,0.04);}
+.alert-item.success{border-left-color:var(--green);background:rgba(0,230,118,0.04);}
+.alert-title-sm{font-weight:600;color:var(--text);margin-bottom:.15rem;}
+.alert-desc-sm{color:var(--muted);line-height:1.5;font-size:.68rem;}
+.alert-meta-sm{margin-left:auto;font-size:.6rem;color:var(--muted);flex-shrink:0;text-align:right;}
+.alert-meta-sm .proto-tag{color:var(--cyan2);}
+
+/* BLOCKCHAIN LOG */
+.blockchain-log{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:.8rem;max-height:190px;overflow-y:auto;font-size:.65rem;line-height:1.9;}
+.blockchain-log::-webkit-scrollbar{width:3px;}
+.blockchain-log::-webkit-scrollbar-thumb{background:var(--dim);}
+.log-entry{display:flex;gap:.8rem;border-bottom:1px solid rgba(255,255,255,0.03);padding:.1rem 0;flex-wrap:nowrap;overflow:hidden;}
+.log-entry:last-child{border-bottom:none;}
+.log-ts{color:var(--muted);flex-shrink:0;min-width:58px;}
+.log-hash{color:var(--violet);flex-shrink:0;min-width:95px;overflow:hidden;text-overflow:ellipsis;}
+.log-action{color:var(--cyan2);flex-shrink:0;min-width:110px;}
+.log-proto{color:var(--text);flex-shrink:0;min-width:80px;}
+.log-val{color:var(--amber);margin-left:auto;flex-shrink:0;}
+.log-status-ok{color:var(--green);}
+.log-status-warn{color:var(--amber);}
+.log-status-err{color:var(--red);}
+
+/* CHART AREA */
+.chart-area{height:180px;position:relative;}
+
+/* TOKEN TABLE */
+.token-table{width:100%;border-collapse:collapse;font-size:.72rem;}
+.token-table th{text-align:left;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:.6rem .8rem;border-bottom:1px solid var(--border);}
+.token-table td{padding:.65rem .8rem;border-bottom:1px solid rgba(255,255,255,0.03);}
+.token-table tr:hover td{background:rgba(0,210,255,0.025);}
+.risk-badge{font-size:.6rem;padding:.15rem .5rem;border-radius:2px;letter-spacing:.06em;}
+.risk-badge.low{background:rgba(0,230,118,0.1);color:var(--green);}
+.risk-badge.med{background:rgba(255,179,0,0.1);color:var(--amber);}
+.risk-badge.high{background:rgba(255,61,90,0.1);color:var(--red);}
+
+/* MONITOR CONTROLS */
+.monitor-controls{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;padding:1rem 1.2rem;background:var(--panel);border:1px solid var(--border);border-radius:6px;margin-bottom:1.5rem;}
+.ctrl-btn{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:.4rem 1rem;font-family:'IBM Plex Mono',monospace;font-size:.72rem;border-radius:4px;cursor:pointer;transition:all .2s;letter-spacing:.04em;}
+.ctrl-btn:hover{border-color:var(--cyan);color:var(--cyan);}
+.ctrl-btn.c-start{background:rgba(0,230,118,0.08);border-color:rgba(0,230,118,0.3);color:var(--green);}
+.ctrl-btn.c-start:hover{background:rgba(0,230,118,0.15);box-shadow:0 0 12px rgba(0,230,118,0.2);}
+.ctrl-btn.c-stop{background:rgba(255,61,90,0.08);border-color:rgba(255,61,90,0.3);color:var(--red);}
+.ctrl-btn.c-stop:hover{background:rgba(255,61,90,0.15);}
+.ctrl-btn.c-export{background:rgba(0,210,255,0.06);border-color:rgba(0,210,255,0.25);color:var(--cyan);}
+.agent-state{margin-left:auto;display:flex;align-items:center;gap:.5rem;font-size:.68rem;}
+.state-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);}
+.state-dot.st-active{background:var(--green);animation:pulseDot 1s infinite;}
+.state-dot.st-paused{background:var(--amber);}
+.state-dot.st-idle{background:var(--muted);}
+
+/* PROTOCOL CARDS */
+.protocol-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:1rem;margin-bottom:1.5rem;}
+.proto-card{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:1rem;transition:border-color .25s;}
+.proto-card:hover{border-color:var(--border2);}
+.proto-header{display:flex;align-items:center;gap:.7rem;margin-bottom:.9rem;}
+.proto-icon{width:36px;height:36px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;background:var(--bg3);flex-shrink:0;}
+.proto-name{font-family:'Orbitron',monospace;font-size:.78rem;font-weight:600;}
+.proto-status-txt{font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;}
+.ps-healthy{color:var(--green);}
+.ps-warn{color:var(--amber);}
+.ps-risk{color:var(--red);}
+.proto-metrics{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;}
+.pm-item{background:var(--bg);border-radius:4px;padding:.45rem .65rem;}
+.pm-label{font-size:.58rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;}
+.pm-val{font-size:.82rem;font-weight:600;margin-top:.15rem;}
+.risk-meter{height:3px;background:var(--dim);border-radius:2px;margin-top:.7rem;overflow:hidden;}
+.risk-meter-fill{height:100%;border-radius:2px;transition:width 1.5s ease;}
+
+/* AGENT LOG */
+.agent-log{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:1rem;height:280px;overflow-y:auto;}
+.agent-log::-webkit-scrollbar{width:3px;}
+.agent-log::-webkit-scrollbar-thumb{background:var(--dim);}
+.log-row{display:grid;grid-template-columns:62px 52px 85px 1fr;gap:.6rem;font-size:.64rem;padding:.22rem 0;border-bottom:1px solid rgba(255,255,255,0.02);}
+.lr-ts{color:var(--muted);}
+.lr-lv{text-align:center;border-radius:2px;padding:0 .25rem;line-height:1.5;}
+.lr-lv.LV-INFO{color:var(--cyan);background:rgba(0,210,255,0.08);}
+.lr-lv.LV-ALERT{color:var(--red);background:rgba(255,61,90,0.1);}
+.lr-lv.LV-WARN{color:var(--amber);background:rgba(255,179,0,0.08);}
+.lr-lv.LV-OK{color:var(--green);background:rgba(0,230,118,0.08);}
+.lr-lv.LV-DATA{color:var(--violet);background:rgba(180,125,255,0.08);}
+.lr-src{color:var(--cyan2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lr-msg{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* ALERTS PAGE */
+.alerts-filter{display:flex;gap:.5rem;margin-bottom:1.2rem;flex-wrap:wrap;}
+.filter-btn{background:var(--panel);border:1px solid var(--border);color:var(--muted);padding:.3rem .9rem;font-size:.68rem;border-radius:100px;cursor:pointer;font-family:'IBM Plex Mono',monospace;transition:all .2s;letter-spacing:.04em;}
+.filter-btn.active,.filter-btn:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(0,210,255,0.06);}
+.filter-btn.f-crit.active{border-color:var(--red);color:var(--red);background:rgba(255,61,90,0.08);}
+.filter-btn.f-warn.active{border-color:var(--amber);color:var(--amber);background:rgba(255,179,0,0.08);}
+.filter-btn.f-succ.active{border-color:var(--green);color:var(--green);background:rgba(0,230,118,0.08);}
+.alert-card{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:1.2rem;margin-bottom:.8rem;display:flex;gap:1rem;align-items:flex-start;border-left:4px solid;transition:box-shadow .2s;}
+.alert-card.critical{border-left-color:var(--red);}
+.alert-card.warning{border-left-color:var(--amber);}
+.alert-card.info{border-left-color:var(--cyan);}
+.alert-card.success{border-left-color:var(--green);}
+.alert-card:hover{box-shadow:var(--glow-c);}
+.alert-card.critical:hover{box-shadow:var(--glow-r);}
+.ac-icon{font-size:1.5rem;flex-shrink:0;}
+.ac-body{flex:1;min-width:0;}
+.ac-title{font-family:'Orbitron',monospace;font-size:.8rem;font-weight:600;margin-bottom:.4rem;color:var(--text);}
+.ac-desc{font-size:.71rem;color:var(--muted);line-height:1.6;margin-bottom:.6rem;}
+.ac-tags{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.6rem;}
+.ac-tag{font-size:.6rem;padding:.15rem .5rem;border-radius:2px;background:rgba(0,210,255,0.08);color:var(--cyan);letter-spacing:.06em;}
+.ac-actions{display:flex;gap:.4rem;}
+.ac-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:.22rem .7rem;font-size:.62rem;border-radius:2px;cursor:pointer;font-family:'IBM Plex Mono',monospace;transition:all .2s;}
+.ac-btn:hover{border-color:var(--cyan);color:var(--cyan);}
+.ac-meta{text-align:right;font-size:.62rem;color:var(--muted);flex-shrink:0;min-width:90px;}
+.ac-meta .ac-time-val{color:var(--text);}
+.ac-meta .ac-block-val{color:var(--violet);margin-top:.2rem;}
+
+/* PORTFOLIO */
+.portfolio-hero{background:linear-gradient(135deg,var(--panel),var(--panel2));border:1px solid var(--border2);border-radius:8px;padding:2rem;margin-bottom:1.5rem;position:relative;overflow:hidden;}
+.portfolio-hero::before{content:'';position:absolute;top:-50%;right:-10%;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(0,210,255,0.06),transparent 70%);}
+.ph-label{font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem;}
+.ph-val{font-family:'Orbitron',monospace;font-size:2.4rem;font-weight:900;background:linear-gradient(135deg,var(--cyan),var(--cyan2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.ph-change{font-size:.8rem;margin-top:.4rem;color:var(--green);}
+.ph-stats{display:flex;gap:2rem;margin-top:1.5rem;flex-wrap:wrap;}
+.ph-stat .ph-stat-label{font-size:.6rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
+.ph-stat .ph-stat-val{font-size:.9rem;font-weight:600;margin-top:.2rem;}
+.pos-table{width:100%;border-collapse:collapse;font-size:.72rem;}
+.pos-table th{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:.65rem 1rem;border-bottom:1px solid var(--border);text-align:left;}
+.pos-table td{padding:.75rem 1rem;border-bottom:1px solid rgba(255,255,255,0.03);}
+.pos-table tr:hover td{background:rgba(0,210,255,0.02);}
+.health-bar{height:4px;background:var(--dim);border-radius:2px;width:70px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:.4rem;}
+.health-fill{height:100%;border-radius:2px;}
+.connect-overlay{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4rem 2rem;text-align:center;}
+.co-icon{font-size:3rem;margin-bottom:1rem;}
+.co-title{font-family:'Orbitron',monospace;font-size:1.1rem;margin-bottom:.6rem;color:var(--text);}
+.co-sub{font-size:.78rem;color:var(--muted);max-width:400px;line-height:1.6;margin-bottom:1.5rem;}
+
+/* ANALYTICS */
+.chart-panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:1.2rem;margin-bottom:1.5rem;}
+.chart-panel .chart-title{font-family:'Orbitron',monospace;font-size:.76rem;color:var(--text);margin-bottom:1rem;letter-spacing:.06em;}
+
+/* BLOCKCHAIN LOG PAGE */
+.tx-filters{display:flex;gap:.5rem;margin-bottom:1rem;align-items:center;flex-wrap:wrap;}
+.tx-count-label{margin-left:auto;font-size:.68rem;color:var(--muted);}
+.tx-table{width:100%;border-collapse:collapse;font-size:.67rem;}
+.tx-table th{font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:.5rem .8rem;border-bottom:1px solid var(--border);text-align:left;}
+.tx-table td{padding:.6rem .8rem;border-bottom:1px solid rgba(255,255,255,0.025);}
+.tx-table tr:hover td{background:rgba(0,210,255,0.02);}
+.tx-hash-link{color:var(--violet);cursor:pointer;font-size:.63rem;}
+.tx-hash-link:hover{text-decoration:underline;}
+.tx-addr{color:var(--cyan2);font-size:.63rem;}
+.tx-type-badge{font-size:.58rem;padding:.13rem .45rem;border-radius:2px;letter-spacing:.04em;}
+.ttb-swap{background:rgba(0,210,255,0.1);color:var(--cyan);}
+.ttb-liq{background:rgba(0,230,118,0.1);color:var(--green);}
+.ttb-borrow{background:rgba(255,179,0,0.1);color:var(--amber);}
+.ttb-liquidate{background:rgba(255,61,90,0.1);color:var(--red);}
+.ttb-bridge{background:rgba(180,125,255,0.1);color:var(--violet);}
+
+/* WALLET MODAL */
+.modal-bg{display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.82);backdrop-filter:blur(10px);align-items:center;justify-content:center;}
+.modal-bg.open{display:flex;}
+.modal-box{background:var(--panel);border:1px solid var(--border2);border-radius:10px;padding:1.8rem;width:380px;max-width:95vw;position:relative;}
+.modal-box h3{font-family:'Orbitron',monospace;font-size:1rem;margin-bottom:1.3rem;color:var(--text);}
+.modal-close{position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem;}
+.wallet-opt{display:flex;align-items:center;gap:.9rem;padding:.85rem 1rem;border-radius:6px;border:1px solid var(--border);cursor:pointer;margin-bottom:.6rem;transition:all .2s;}
+.wallet-opt:hover{border-color:var(--cyan);background:rgba(0,210,255,0.04);}
+.w-icon{font-size:1.6rem;}
+.w-name{font-family:'Orbitron',monospace;font-size:.78rem;font-weight:600;}
+.w-desc{font-size:.62rem;color:var(--muted);}
+
+/* TOAST */
+#toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:99998;background:var(--panel2);border:1px solid var(--border2);border-radius:6px;padding:.8rem 1.2rem;font-size:.72rem;min-width:240px;max-width:320px;transform:translateY(80px);opacity:0;transition:all .3s;pointer-events:none;}
+#toast.show{transform:translateY(0);opacity:1;}
+#toast.t-success{border-color:rgba(0,230,118,.4);color:var(--green);}
+#toast.t-alert{border-color:rgba(255,61,90,.4);color:var(--red);}
+#toast.t-info{border-color:var(--border2);color:var(--cyan);}
+
+/* RESPONSIVE */
+@media(max-width:960px){.grid-4{grid-template-columns:repeat(2,1fr);}.grid-3{grid-template-columns:repeat(2,1fr);}.grid-2-1{grid-template-columns:1fr;}}
+@media(max-width:640px){.grid-4,.grid-3,.grid-2{grid-template-columns:1fr;}.content{padding:1rem;}.topbar{padding:.6rem 1rem;}.topbar-logo>span>span:last-child{display:none;}.ph-stats{gap:1rem;}}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--dim);border-radius:4px;}
+::-webkit-scrollbar-thumb:hover{background:var(--muted);}
+
+/* ANIMATIONS */
+.fade-up{animation:fadeUp .5s ease forwards;opacity:0;}
+.fd1{animation-delay:.05s}.fd2{animation-delay:.1s}.fd3{animation-delay:.15s}.fd4{animation-delay:.2s}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+</style>
+</head>
+<body>
+<div class="app-wrapper">
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-logo">
+    <div class="shield-icon">🛡</div>
+    <span>DeFi<span style="color:var(--cyan2)">Guardian</span></span>
+  </div>
+  <div class="agent-status-bar">
+    <span class="pulse-dot"></span>
+    <span id="agentStatusLabel">AGENT ACTIVE</span>
+  </div>
+  <div class="topbar-right">
+    <div class="block-ticker">Block <span class="bval" id="liveBlock">19,284,041</span></div>
+    <span id="walletAddrDisplay"></span>
+    <button id="walletBtn" onclick="openWalletModal()">Connect Wallet</button>
+  </div>
+</header>
+
+<div class="main-layout">
+  <!-- SIDEBAR -->
+  <nav class="sidebar" id="sidebar">
+    <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle menu">☰</button>
+    <button class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard',this)">
+      📊<span class="nav-label-tip">Dashboard</span>
+    </button>
+    <button class="nav-item" id="nav-monitoring" onclick="showPage('monitoring',this)">
+      🔭<span class="nav-label-tip">Monitoring</span>
+    </button>
+    <button class="nav-item" id="nav-alerts" onclick="showPage('alerts',this)" style="position:relative;">
+      🚨<span class="nav-label-tip">Alerts</span>
+      <span class="nav-badge" id="alertBadge" style="display:none;">0</span>
+    </button>
+    <button class="nav-item" id="nav-portfolio" onclick="showPage('portfolio',this)">
+      💼<span class="nav-label-tip">Portfolio</span>
+    </button>
+    <button class="nav-item" id="nav-analytics" onclick="showPage('analytics',this)">
+      📈<span class="nav-label-tip">Analytics</span>
+    </button>
+    <button class="nav-item" id="nav-blockchain" onclick="showPage('blockchain',this)">
+      🔗<span class="nav-label-tip">Chain Log</span>
+    </button>
+  </nav>
+
+  <main class="content">
+
+    <!-- ══ DASHBOARD ══ -->
+    <div class="page active" id="page-dashboard">
+      <div class="sec-header">
+        <h1 class="sec-title">OVERVIEW DASHBOARD</h1>
+        <span class="sec-badge live">● LIVE</span>
+        <span id="dashTime" style="margin-left:auto;font-size:.62rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;"></span>
+      </div>
+
+      <div class="grid-4">
+        <div class="metric-card fade-up fd1">
+          <div class="mc-label">Total Value Locked</div>
+          <div class="mc-val c-cyan" id="m-tvl">$4.28B</div>
+          <div class="mc-change up">▲ +2.4% (24h)</div>
+        </div>
+        <div class="metric-card fade-up fd2">
+          <div class="mc-label">Active Alerts</div>
+          <div class="mc-val c-red" id="m-alerts">7</div>
+          <div class="mc-change dn">▲ +3 new</div>
+        </div>
+        <div class="metric-card fade-up fd3">
+          <div class="mc-label">AI Scans Today</div>
+          <div class="mc-val c-violet" id="m-scans">24,841</div>
+          <div class="mc-change up">▲ Running</div>
+        </div>
+        <div class="metric-card fade-up fd4">
+          <div class="mc-label">Opportunities</div>
+          <div class="mc-val c-green" id="m-opps">12</div>
+          <div class="mc-change up">▲ +5 detected</div>
+        </div>
+      </div>
+
+      <div class="grid-2-1">
+        <div>
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">⚡ LIVE ALERT FEED</span>
+              <span class="sec-badge alert-badge">REAL-TIME</span>
+            </div>
+            <div class="alert-feed" id="alertFeed"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">📈 MARKET ACTIVITY — 60s WINDOW</span>
+              <span class="sec-badge live">LIVE</span>
+            </div>
+            <div class="chart-area">
+              <canvas id="marketChart"></canvas>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">🛡 PORTFOLIO RISK SCORE</span></div>
+            <div class="risk-gauge-wrap">
+              <div class="risk-gauge">
+                <svg viewBox="0 0 130 130" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="rGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" style="stop-color:#00e676"/>
+                      <stop offset="50%" style="stop-color:#ffb300"/>
+                      <stop offset="100%" style="stop-color:#ff3d5a"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M18,110 A47,47 0 0,1 112,110" fill="none" stroke="#1e3a55" stroke-width="10" stroke-linecap="round"/>
+                  <path d="M18,110 A47,47 0 0,1 112,110" fill="none" stroke="url(#rGrad)" stroke-width="10" stroke-linecap="round" stroke-dasharray="148" stroke-dashoffset="56" id="riskArc"/>
+                  <line x1="65" y1="110" x2="65" y2="66" stroke="var(--text)" stroke-width="2.5" stroke-linecap="round" id="riskNeedle" style="transform-origin:65px 110px;transform:rotate(-28deg);"/>
+                </svg>
+              </div>
+              <div class="risk-label">
+                <div class="rval" id="riskVal" style="color:var(--amber);">42</div>
+                <div class="rtxt">Risk Score / 100</div>
+              </div>
+            </div>
+          </div>
+          <div class="panel" style="padding:.8rem;">
+            <div class="panel-header"><span class="panel-title">🔍 PROTOCOL STATUS</span></div>
+            <table class="token-table">
+              <thead><tr><th>Protocol</th><th>TVL</th><th>Risk</th><th>APY</th></tr></thead>
+              <tbody id="protocolTableBody"></tbody>
+            </table>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">⚙ AGENT STATS</span></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;font-size:.68rem;">
+              <div><div style="color:var(--muted);font-size:.6rem;margin-bottom:.2rem;">Uptime</div><div style="color:var(--green);font-weight:600;" id="agentUptime">00:00:00</div></div>
+              <div><div style="color:var(--muted);font-size:.6rem;margin-bottom:.2rem;">Model Acc.</div><div style="color:var(--cyan);font-weight:600;" id="aiAccDisplay">94.7%</div></div>
+              <div><div style="color:var(--muted);font-size:.6rem;margin-bottom:.2rem;">Txns Watched</div><div style="color:var(--violet);font-weight:600;" id="txWatched">3,482</div></div>
+              <div><div style="color:var(--muted);font-size:.6rem;margin-bottom:.2rem;">Gas Oracle</div><div style="color:var(--amber);font-weight:600;" id="gasOracle">28 Gwei</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">🔗 BLOCKCHAIN EVENT LOG — TRANSPARENT AUDIT TRAIL</span>
+          <span class="sec-badge live">ON-CHAIN</span>
+        </div>
+        <div class="blockchain-log" id="blockchainLog"></div>
+      </div>
+    </div>
+
+    <!-- ══ MONITORING ══ -->
+    <div class="page" id="page-monitoring">
+      <div class="sec-header">
+        <h1 class="sec-title">AUTONOMOUS AGENT MONITOR</h1>
+        <span class="sec-badge live" id="monBadge">● RUNNING</span>
+      </div>
+
+      <div class="monitor-controls">
+        <button class="ctrl-btn c-start" onclick="agentStart()">▶ START</button>
+        <button class="ctrl-btn c-stop" onclick="agentPause()">⏸ PAUSE</button>
+        <button class="ctrl-btn" onclick="agentReset()">↺ RESET</button>
+        <button class="ctrl-btn c-export" onclick="exportAgentLog()">⬇ EXPORT LOG</button>
+        <button class="ctrl-btn c-export" onclick="exportReport()">📄 EXPORT REPORT</button>
+        <div class="agent-state">
+          <div class="state-dot st-active" id="stateIndicator"></div>
+          <span id="stateLabel" style="color:var(--green);">AGENT RUNNING</span>
+        </div>
+      </div>
+
+      <div class="grid-4">
+        <div class="metric-card"><div class="mc-label">Block Height</div><div class="mc-val c-violet" id="monBlock">19,284,041</div><div class="mc-sub">+1 every ~12s</div></div>
+        <div class="metric-card"><div class="mc-label">Events / Min</div><div class="mc-val c-cyan" id="eventsMin">142</div><div class="mc-change up">▲ High Activity</div></div>
+        <div class="metric-card"><div class="mc-label">Liquidation Risk</div><div class="mc-val c-amber" id="liqRisk">3 Positions</div><div class="mc-change dn">⚠ Watch</div></div>
+        <div class="metric-card"><div class="mc-label">Anomalies Found</div><div class="mc-val c-red" id="anomalies">2</div><div class="mc-change dn">▲ +1 new</div></div>
+      </div>
+
+      <div class="protocol-grid" id="protocolCards"></div>
+
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">📡 REAL-TIME NETWORK ACTIVITY</span><span class="sec-badge live">LIVE</span></div>
+        <div style="height:200px;"><canvas id="networkActivityChart"></canvas></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">📋 AGENT EXECUTION LOG</span>
+          <button class="ctrl-btn" style="font-size:.62rem;padding:.18rem .6rem;" onclick="clearAgentLog()">Clear</button>
+        </div>
+        <div class="agent-log" id="agentLog"></div>
+      </div>
+    </div>
+
+    <!-- ══ ALERTS ══ -->
+    <div class="page" id="page-alerts">
+      <div class="sec-header">
+        <h1 class="sec-title">ALERT CENTER</h1>
+        <span class="sec-badge alert-badge" id="alertCountBadge">7 ACTIVE</span>
+      </div>
+      <div class="alerts-filter">
+        <button class="filter-btn active" onclick="filterAlerts('all',this)">All</button>
+        <button class="filter-btn f-crit" onclick="filterAlerts('critical',this)">🔴 Critical</button>
+        <button class="filter-btn f-warn" onclick="filterAlerts('warning',this)">🟡 Warning</button>
+        <button class="filter-btn f-succ" onclick="filterAlerts('success',this)">🟢 Opportunity</button>
+        <button class="filter-btn" onclick="filterAlerts('info',this)">🔵 Info</button>
+      </div>
+      <div id="alertsPageList"></div>
+    </div>
+
+    <!-- ══ PORTFOLIO ══ -->
+    <div class="page" id="page-portfolio">
+      <div class="sec-header"><h1 class="sec-title">PORTFOLIO DASHBOARD</h1></div>
+      <div id="portfolioConnectPrompt" class="connect-overlay">
+        <div class="co-icon">🔐</div>
+        <div class="co-title">Connect Your Wallet</div>
+        <p class="co-sub">Connect your blockchain wallet to view real-time portfolio positions, AI risk analysis, yield opportunities, and liquidation monitoring.</p>
+        <button class="ctrl-btn c-start" style="font-size:.8rem;padding:.6rem 1.5rem;" onclick="openWalletModal()">Connect Wallet</button>
+      </div>
+      <div id="portfolioContent" style="display:none;">
+        <div class="portfolio-hero">
+          <div class="ph-label">Total Portfolio Value</div>
+          <div class="ph-val">$48,294.72</div>
+          <div class="ph-change">▲ +$1,284.30 (+2.73%) today</div>
+          <div class="ph-stats">
+            <div class="ph-stat"><div class="ph-stat-label">Net APY</div><div class="ph-stat-val" style="color:var(--cyan)">18.4%</div></div>
+            <div class="ph-stat"><div class="ph-stat-label">Risk Score</div><div class="ph-stat-val" style="color:var(--amber)">42/100</div></div>
+            <div class="ph-stat"><div class="ph-stat-label">Positions</div><div class="ph-stat-val">8</div></div>
+            <div class="ph-stat"><div class="ph-stat-label">Health</div><div class="ph-stat-val" style="color:var(--green)">Healthy</div></div>
+          </div>
+        </div>
+        <div class="grid-3">
+          <div class="metric-card"><div class="mc-label">Total Supplied</div><div class="mc-val c-cyan">$32,400</div><div class="mc-sub">Across 4 protocols</div></div>
+          <div class="metric-card"><div class="mc-label">Total Borrowed</div><div class="mc-val c-amber">$8,200</div><div class="mc-sub">LTV: 25.3%</div></div>
+          <div class="metric-card"><div class="mc-label">Earned Today</div><div class="mc-val c-green">+$124.50</div><div class="mc-sub">Auto-compounded</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">💼 OPEN POSITIONS</span><button class="ctrl-btn" style="font-size:.62rem;padding:.2rem .6rem;" onclick="disconnectWallet()">Disconnect</button></div>
+          <div style="overflow-x:auto;">
+            <table class="pos-table">
+              <thead><tr><th>Asset</th><th>Protocol</th><th>Type</th><th>Value</th><th>APY</th><th>Health</th><th>AI Signal</th></tr></thead>
+              <tbody id="positionTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">🤖 AI RECOMMENDATIONS</span></div>
+          <div id="aiRecs" style="display:flex;flex-direction:column;gap:.7rem;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ ANALYTICS ══ -->
+    <div class="page" id="page-analytics">
+      <div class="sec-header"><h1 class="sec-title">MARKET ANALYTICS</h1><span class="sec-badge live">LIVE DATA</span></div>
+      <div class="grid-2">
+        <div class="chart-panel"><div class="chart-title">ETH / USD — Real-time Price Feed</div><div style="height:200px;"><canvas id="ethLargeChart"></canvas></div></div>
+        <div class="chart-panel"><div class="chart-title">BTC / USD — Real-time Price Feed</div><div style="height:200px;"><canvas id="btcLargeChart"></canvas></div></div>
+      </div>
+      <div class="grid-2">
+        <div class="chart-panel"><div class="chart-title">DeFi TVL — 14 Day Trend</div><div style="height:200px;"><canvas id="tvlChart"></canvas></div></div>
+        <div class="chart-panel"><div class="chart-title">Liquidation Risk Index</div><div style="height:200px;"><canvas id="liqChart"></canvas></div></div>
+      </div>
+      <div class="grid-4">
+        <div class="metric-card"><div class="mc-label">ETH Price</div><div class="mc-val c-cyan" id="anEth">$3,284</div><div class="mc-change up" id="anEthC">+2.34%</div></div>
+        <div class="metric-card"><div class="mc-label">BTC Price</div><div class="mc-val c-amber" id="anBtc">$68,420</div><div class="mc-change up" id="anBtcC">+1.82%</div></div>
+        <div class="metric-card"><div class="mc-label">Gas (Gwei)</div><div class="mc-val c-violet" id="anGas">28</div><div class="mc-sub">Standard</div></div>
+        <div class="metric-card"><div class="mc-label">Fear &amp; Greed</div><div class="mc-val c-green" id="anFG">72</div><div class="mc-sub">Greed Zone</div></div>
+      </div>
+    </div>
+
+    <!-- ══ BLOCKCHAIN LOG ══ -->
+    <div class="page" id="page-blockchain">
+      <div class="sec-header"><h1 class="sec-title">BLOCKCHAIN TRANSACTION LOG</h1><span class="sec-badge live">TRANSPARENT AUDIT</span></div>
+      <div class="tx-filters">
+        <button class="filter-btn active" onclick="filterTx('all',this)">All Txns</button>
+        <button class="filter-btn" onclick="filterTx('swap',this)">Swaps</button>
+        <button class="filter-btn" onclick="filterTx('liq',this)">Liquidity</button>
+        <button class="filter-btn" onclick="filterTx('borrow',this)">Borrows</button>
+        <button class="filter-btn" onclick="filterTx('liquidate',this)">Liquidations</button>
+        <button class="filter-btn" onclick="filterTx('bridge',this)">Bridges</button>
+        <span class="tx-count-label" id="txCountLabel">Showing 0 transactions</span>
+      </div>
+      <div class="panel" style="padding:0;overflow:hidden;">
+        <div style="overflow-x:auto;">
+          <table class="tx-table">
+            <thead><tr><th>Tx Hash</th><th>Block</th><th>Type</th><th>From</th><th>To</th><th>Value</th><th>Protocol</th><th>AI Flag</th><th>Time</th></tr></thead>
+            <tbody id="txTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+</div>
+
+<!-- WALLET MODAL -->
+<div class="modal-bg" id="walletModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeWalletModal()">✕</button>
+    <h3>🔐 Connect Wallet</h3>
+    <div class="wallet-opt" onclick="connectWallet('MetaMask')"><span class="w-icon">🦊</span><div><div class="w-name">MetaMask</div><div class="w-desc">Browser extension wallet</div></div></div>
+    <div class="wallet-opt" onclick="connectWallet('WalletConnect')"><span class="w-icon">🔵</span><div><div class="w-name">WalletConnect</div><div class="w-desc">Scan with mobile wallet</div></div></div>
+    <div class="wallet-opt" onclick="connectWallet('Coinbase Wallet')"><span class="w-icon">🔷</span><div><div class="w-name">Coinbase Wallet</div><div class="w-desc">Self-custody wallet</div></div></div>
+    <div class="wallet-opt" onclick="connectWallet('Phantom')"><span class="w-icon">👻</span><div><div class="w-name">Phantom</div><div class="w-desc">Multi-chain wallet</div></div></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+'use strict';
+// ═══════════════════════════════
+// GLOBAL STATE
+// ═══════════════════════════════
+let walletConnected = false;
+let walletAddress   = '';
+let agentRunning    = true;
+let agentStartTime  = Date.now();
+let blockHeight     = 19284041;
+let tickCount       = 0;
+let scanCount       = 24841;
+let newAlertCount   = 0;
+let allTxns         = [];
+let agentLogs       = [];
+let currentTxFilter = 'all';
+let currentAlertFilter = 'all';
+
+// CHART REFS
+let marketChartRef = null, networkChartRef = null;
+let ethChartRef = null, btcChartRef = null;
+let tvlChartRef = null, liqChartRef = null;
+
+// PRICE STATE
+let ethPrice = 3284;
+let btcPrice = 68420;
+
+// ═══════════════════════════════
+// UTILITIES
+// ═══════════════════════════════
+function rand(a, b) { return Math.random() * (b - a) + a; }
+function ri(a, b)   { return Math.floor(rand(a, b + 1)); }
+function ts() {
+  const d = new Date();
+  return [d.getHours(), d.getMinutes(), d.getSeconds()].map(x => String(x).padStart(2,'0')).join(':');
+}
+function shortAddr(a) { return a.slice(0,6)+'...'+a.slice(-4); }
+function genHex(len) {
+  const c = '0123456789abcdef';
+  return '0x' + Array.from({length: len}, () => c[ri(0,15)]).join('');
+}
+
+// ═══════════════════════════════
+// TOAST
+// ═══════════════════════════════
+function toast(msg, type='info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show t-' + type;
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => { t.className = ''; }, 3200);
+}
+
+// ═══════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const page = document.getElementById('page-' + id);
+  if (page) page.classList.add('active');
+  if (btn) btn.classList.add('active');
+  // Hide alert badge when visiting alerts page
+  if (id === 'alerts') {
+    document.getElementById('alertBadge').style.display = 'none';
+    newAlertCount = 0;
+  }
+  // Re-init charts that might not have rendered yet
+  if (id === 'analytics' && !ethChartRef) setTimeout(initAnalyticsCharts, 50);
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('expanded');
+}
+
+// ═══════════════════════════════
+// WALLET
+// ═══════════════════════════════
+function openWalletModal()  { document.getElementById('walletModal').classList.add('open'); }
+function closeWalletModal() { document.getElementById('walletModal').classList.remove('open'); }
+
+document.getElementById('walletModal').addEventListener('click', function(e) {
+  if (e.target === this) closeWalletModal();
+});
+
+function connectWallet(name) {
+  closeWalletModal();
+  walletAddress = genHex(40);
+  walletConnected = true;
+  const short = shortAddr(walletAddress);
+  const addrEl = document.getElementById('walletAddrDisplay');
+  addrEl.textContent = short;
+  addrEl.classList.add('show');
+  const btn = document.getElementById('walletBtn');
+  btn.textContent = 'Connected';
+  btn.classList.add('connected');
+  toast('✓ ' + name + ' connected: ' + short, 'success');
+  addLog('OK','WALLET','User wallet connected: ' + short + ' — activating user-specific monitoring');
+  showPortfolio();
+}
+
+function disconnectWallet() {
+  walletConnected = false;
+  walletAddress   = '';
+  document.getElementById('walletAddrDisplay').textContent = '';
+  document.getElementById('walletAddrDisplay').classList.remove('show');
+  const btn = document.getElementById('walletBtn');
+  btn.textContent = 'Connect Wallet';
+  btn.classList.remove('connected');
+  document.getElementById('portfolioContent').style.display       = 'none';
+  document.getElementById('portfolioConnectPrompt').style.display = 'flex';
+  toast('Wallet disconnected', 'info');
+}
+
+function showPortfolio() {
+  document.getElementById('portfolioConnectPrompt').style.display = 'none';
+  document.getElementById('portfolioContent').style.display       = 'block';
+  renderPositions();
+  renderAIRecs();
+}
+
+// ═══════════════════════════════
+// DATA
+// ═══════════════════════════════
+const PROTOCOLS = [
+  {name:'Aave V3',    icon:'🏦', tvl:'$8.2B',  apy:'4.2%',  risk:'low',  riskPct:15, status:'healthy', chain:'Ethereum'},
+  {name:'Uniswap V3', icon:'🦄', tvl:'$5.8B',  apy:'12.4%', risk:'low',  riskPct:22, status:'healthy', chain:'Multi-chain'},
+  {name:'Compound',   icon:'⚗️', tvl:'$2.1B',  apy:'3.8%',  risk:'med',  riskPct:45, status:'warn',    chain:'Ethereum'},
+  {name:'Curve',      icon:'〰️', tvl:'$3.4B',  apy:'8.7%',  risk:'low',  riskPct:18, status:'healthy', chain:'Multi-chain'},
+  {name:'MakerDAO',   icon:'🔨', tvl:'$6.9B',  apy:'2.1%',  risk:'low',  riskPct:20, status:'healthy', chain:'Ethereum'},
+  {name:'dYdX',       icon:'📊', tvl:'$1.2B',  apy:'22.4%', risk:'high', riskPct:72, status:'risk',    chain:'StarkEx'},
+];
+
+const POSITIONS = [
+  {icon:'🔷', asset:'ETH',     protocol:'Aave V3',  type:'Supply',     value:'$18,400', apy:'4.2%', health:92, signal:'HOLD',     signalColor:'var(--cyan)'},
+  {icon:'💲', asset:'USDC',    protocol:'Compound', type:'Supply',     value:'$8,200',  apy:'3.8%', health:99, signal:'OPTIMIZE',  signalColor:'var(--green)'},
+  {icon:'🔷', asset:'ETH',     protocol:'MakerDAO', type:'Collateral', value:'$12,000', apy:'0%',   health:74, signal:'WATCH',     signalColor:'var(--amber)'},
+  {icon:'💵', asset:'DAI',     protocol:'MakerDAO', type:'Borrow',     value:'-$4,200', apy:'3.5%', health:74, signal:'REDUCE',    signalColor:'var(--amber)'},
+  {icon:'🦄', asset:'UNI-V3',  protocol:'Uniswap V3',type:'LP',        value:'$5,800',  apy:'18.2%',health:88, signal:'COMPOUND',  signalColor:'var(--green)'},
+];
+
+const AI_RECS = [
+  {icon:'⚡', color:'var(--green)',  title:'Rebalance Opportunity',   desc:'Move 20% of USDC from Compound (3.8% APY) to Aave V3 (5.2% APY). Estimated annual gain: +$114.'},
+  {icon:'⚠️', color:'var(--amber)',  title:'Liquidation Risk Detected',desc:'MakerDAO ETH-DAI position health factor at 1.74. Add $2,000 collateral to bring above 2.0.'},
+  {icon:'🎯', color:'var(--cyan)',   title:'Yield Arbitrage Found',    desc:'ETH-USDC LP on Curve Tricrypto offering 24.3% APY vs your current 18.2% on Uniswap.'},
+];
+
+let ALERT_DATA = [
+  {type:'critical', icon:'🔴', title:'Liquidation Threat Detected',       desc:'Position ID #4821 on Aave V3 approaching liquidation threshold. Health factor: 1.12. Collateral value dropped 8.2% in 2 hours.',       proto:'Aave V3',    block:'19,284,041', time:'2m ago',  tags:['Liquidation','High Priority','ETH/USDC']},
+  {type:'warning',  icon:'🟡', title:'Abnormal Swap Volume',               desc:'Detected 340% above-average swap volume on USDC/ETH pair. Possible whale activity. Monitor for price impact.',                         proto:'Uniswap V3', block:'19,284,039', time:'5m ago',  tags:['Anomaly','Volume','USDC']},
+  {type:'critical', icon:'🔴', title:'Smart Contract Anomaly',             desc:'Unusual reentrancy-like pattern in Compound cDAI interactions. 3 transactions flagged with abnormal gas usage (>500k Gwei).',            proto:'Compound',   block:'19,284,035', time:'12m ago', tags:['Security','Contract','Critical']},
+  {type:'success',  icon:'🟢', title:'Arbitrage Opportunity Detected',     desc:'Cross-chain ETH price discrepancy: Ethereum $3,284 vs Arbitrum $3,271. Flash loan arbitrage window: ~$420 profit per $100K.',            proto:'Bridge',     block:'19,284,033', time:'15m ago', tags:['Opportunity','Arbitrage','ETH']},
+  {type:'warning',  icon:'🟡', title:'Gas Price Spike',                    desc:'Gas prices surged to 142 Gwei (+380%). Recommend pausing non-urgent transactions. Estimated cost for standard swap: $84.',               proto:'Ethereum',   block:'19,284,031', time:'18m ago', tags:['Gas','Network','Cost']},
+  {type:'info',     icon:'🔵', title:'Governance Vote Passed',             desc:'Aave V3 governance proposal #142 passed: new risk parameters for stETH. Updated LTV ratio from 72% to 68%.',                             proto:'Aave V3',    block:'19,284,028', time:'24m ago', tags:['Governance','stETH','Aave']},
+  {type:'success',  icon:'🟢', title:'High Yield Pool Detected',           desc:'New ETH-rETH pool on Curve offering 38.4% APY (boosted) with low IL risk. Total pool depth $42M. AI confidence: 89%.',                  proto:'Curve',      block:'19,284,025', time:'31m ago', tags:['Yield','Opportunity','Curve']},
+];
+
+const TX_TEMPLATES = [
+  {type:'swap',      label:'SWAP',        cls:'ttb-swap',      protocol:'Uniswap V3',  valRange:[1000,50000],  flag:'Clean'},
+  {type:'liq',       label:'LIQUIDITY',   cls:'ttb-liq',       protocol:'Curve',       valRange:[5000,200000], flag:'Clean'},
+  {type:'borrow',    label:'BORROW',      cls:'ttb-borrow',    protocol:'Aave V3',     valRange:[1000,30000],  flag:'Clean'},
+  {type:'liquidate', label:'LIQUIDATION', cls:'ttb-liquidate', protocol:'Compound',    valRange:[500,10000],   flag:'⚠ Flagged'},
+  {type:'swap',      label:'SWAP',        cls:'ttb-swap',      protocol:'SushiSwap',   valRange:[100,5000],    flag:'Clean'},
+  {type:'bridge',    label:'BRIDGE',      cls:'ttb-bridge',    protocol:'Stargate',    valRange:[1000,100000], flag:'Clean'},
+  {type:'borrow',    label:'BORROW',      cls:'ttb-borrow',    protocol:'MakerDAO',    valRange:[2000,80000],  flag:'Clean'},
+  {type:'liq',       label:'LIQUIDITY',   cls:'ttb-liq',       protocol:'Uniswap V3',  valRange:[500,30000],   flag:'Clean'},
+];
+
+// ═══════════════════════════════
+// RENDER: PROTOCOL TABLE
+// ═══════════════════════════════
+function renderProtocolTable() {
+  const body = document.getElementById('protocolTableBody');
+  body.innerHTML = PROTOCOLS.map(p => `
+    <tr>
+      <td>${p.icon} <span style="color:var(--text)">${p.name}</span></td>
+      <td style="color:var(--cyan)">${p.tvl}</td>
+      <td><span class="risk-badge ${p.risk}">${p.risk.toUpperCase()}</span></td>
+      <td style="color:var(--green)">${p.apy}</td>
+    </tr>`).join('');
+}
+
+// ═══════════════════════════════
+// RENDER: PROTOCOL MONITOR CARDS
+// ═══════════════════════════════
+function renderProtocolCards() {
+  const el = document.getElementById('protocolCards');
+  el.innerHTML = PROTOCOLS.map(p => {
+    const c   = p.status==='healthy' ? 'var(--green)' : p.status==='warn' ? 'var(--amber)' : 'var(--red)';
+    const cls = p.status==='healthy' ? 'ps-healthy'   : p.status==='warn' ? 'ps-warn'      : 'ps-risk';
+    return `<div class="proto-card">
+      <div class="proto-header">
+        <div class="proto-icon">${p.icon}</div>
+        <div>
+          <div class="proto-name">${p.name}</div>
+          <div class="proto-status-txt ${cls}">${p.status.toUpperCase()}</div>
+        </div>
+        <div style="margin-left:auto;font-size:.6rem;color:var(--muted)">${p.chain}</div>
+      </div>
+      <div class="proto-metrics">
+        <div class="pm-item"><div class="pm-label">TVL</div><div class="pm-val" style="color:var(--cyan)">${p.tvl}</div></div>
+        <div class="pm-item"><div class="pm-label">APY</div><div class="pm-val" style="color:var(--green)">${p.apy}</div></div>
+      </div>
+      <div class="risk-meter"><div class="risk-meter-fill" style="width:${p.riskPct}%;background:${c};"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:.58rem;margin-top:.3rem;">
+        <span style="color:var(--muted)">Risk Level</span>
+        <span style="color:${c}">${p.riskPct}%</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════
+// RENDER: ALERT FEED (DASHBOARD)
+// ═══════════════════════════════
+function renderAlertFeed() {
+  const feed = document.getElementById('alertFeed');
+  feed.innerHTML = '';
+  ALERT_DATA.slice(0, 5).forEach(a => {
+    const div = document.createElement('div');
+    div.className = 'alert-item ' + a.type;
+    div.innerHTML = `
+      <span style="font-size:1rem;flex-shrink:0;margin-top:.05rem;">${a.icon}</span>
+      <div style="flex:1;min-width:0;">
+        <div class="alert-title-sm">${a.title}</div>
+        <div class="alert-desc-sm">${a.desc.slice(0, 88)}…</div>
+      </div>
+      <div class="alert-meta-sm">
+        <div class="proto-tag">${a.proto}</div>
+        <div>${a.time}</div>
+      </div>`;
+    feed.appendChild(div);
+  });
+}
+
+// ═══════════════════════════════
+// RENDER: ALERTS PAGE
+// ═══════════════════════════════
+function renderAlertsPage(filter) {
+  currentAlertFilter = filter || currentAlertFilter;
+  const list     = document.getElementById('alertsPageList');
+  const filtered = currentAlertFilter === 'all'
+    ? ALERT_DATA
+    : ALERT_DATA.filter(a => a.type === currentAlertFilter);
+
+  document.getElementById('alertCountBadge').textContent = ALERT_DATA.length + ' ACTIVE';
+
+  list.innerHTML = filtered.map(a => `
+    <div class="alert-card ${a.type}">
+      <span class="ac-icon">${a.icon}</span>
+      <div class="ac-body">
+        <div class="ac-title">${a.title}</div>
+        <div class="ac-desc">${a.desc}</div>
+        <div class="ac-tags">${a.tags.map(t => `<span class="ac-tag">${t}</span>`).join('')}</div>
+        <div class="ac-actions">
+          <button class="ac-btn" onclick="toast('Opening details…','info')">View Details</button>
+          <button class="ac-btn" onclick="this.closest('.alert-card').style.opacity='.4'">Dismiss</button>
+          <button class="ac-btn" onclick="toast('Action queued for execution','success')">Take Action</button>
+        </div>
+      </div>
+      <div class="ac-meta">
+        <div class="ac-time-val">${a.time}</div>
+        <div class="ac-block-val">#${a.block}</div>
+        <div style="margin-top:.4rem;font-size:.58rem;background:rgba(0,210,255,0.08);padding:.2rem .5rem;border-radius:2px;color:var(--cyan);">${a.proto}</div>
+      </div>
+    </div>`).join('');
+}
+
+function filterAlerts(type, btn) {
+  document.querySelectorAll('.alerts-filter .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAlertsPage(type);
+}
+
+// ═══════════════════════════════
+// RENDER: PORTFOLIO
+// ═══════════════════════════════
+function renderPositions() {
+  const body = document.getElementById('positionTableBody');
+  body.innerHTML = POSITIONS.map(p => {
+    const hc = p.health > 80 ? 'var(--green)' : p.health > 60 ? 'var(--amber)' : 'var(--red)';
+    const typeClass = p.type==='Borrow' ? 'high' : p.type==='Collateral' ? 'med' : 'low';
+    return `<tr>
+      <td>${p.icon} <strong>${p.asset}</strong></td>
+      <td style="color:var(--muted)">${p.protocol}</td>
+      <td><span class="risk-badge ${typeClass}">${p.type}</span></td>
+      <td style="font-weight:600;color:${p.value.startsWith('-')?'var(--red)':'var(--text)'}">${p.value}</td>
+      <td style="color:var(--green)">${p.apy}</td>
+      <td>
+        <span style="color:${hc}">${p.health}</span>
+        <div class="health-bar"><div class="health-fill" style="width:${p.health}%;background:${hc}"></div></div>
+      </td>
+      <td><span style="color:${p.signalColor};font-size:.62rem;font-weight:700">${p.signal}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderAIRecs() {
+  document.getElementById('aiRecs').innerHTML = AI_RECS.map(r => `
+    <div style="display:flex;gap:.8rem;padding:.9rem;background:var(--bg3);border-radius:4px;border-left:3px solid ${r.color};align-items:flex-start;">
+      <span style="font-size:1.2rem;flex-shrink:0;">${r.icon}</span>
+      <div style="flex:1;">
+        <div style="font-family:'Orbitron',monospace;font-size:.74rem;font-weight:600;margin-bottom:.3rem;">${r.title}</div>
+        <div style="font-size:.7rem;color:var(--muted);line-height:1.5;">${r.desc}</div>
+      </div>
+      <button class="ac-btn" style="white-space:nowrap;flex-shrink:0;" onclick="toast('Executing: ${r.title.replace(/'/g,'').slice(0,30)}…','success')">Execute</button>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════
+// RENDER: TX TABLE
+// ═══════════════════════════════
+function generateTxns(count) {
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    const tmpl = TX_TEMPLATES[ri(0, TX_TEMPLATES.length - 1)];
+    const val  = rand(tmpl.valRange[0], tmpl.valRange[1]);
+    out.push({
+      hash:      genHex(40),
+      block:     blockHeight - ri(0, 8),
+      type:      tmpl.type,
+      label:     tmpl.label,
+      cls:       tmpl.cls,
+      from:      genHex(40),
+      to:        genHex(40),
+      value:     '$' + Math.floor(val).toLocaleString(),
+      protocol:  tmpl.protocol,
+      flag:      tmpl.flag,
+      time:      new Date(Date.now() - ri(0, 3600000)).toLocaleTimeString(),
+    });
+  }
+  return out;
+}
+
+function renderTxTable(filter) {
+  if (filter !== undefined) currentTxFilter = filter;
+  const filtered = currentTxFilter === 'all'
+    ? allTxns
+    : allTxns.filter(t => t.type === currentTxFilter);
+  document.getElementById('txCountLabel').textContent = `Showing ${filtered.length} transactions`;
+  document.getElementById('txTableBody').innerHTML = filtered.slice(0, 60).map(t => `
+    <tr>
+      <td><span class="tx-hash-link" onclick="toast('Tx: ${t.hash.slice(0,18)}…','info')">${t.hash.slice(0,10)}…</span></td>
+      <td style="color:var(--violet)">${t.block.toLocaleString()}</td>
+      <td><span class="tx-type-badge ${t.cls}">${t.label}</span></td>
+      <td class="tx-addr">${shortAddr(t.from)}</td>
+      <td class="tx-addr">${shortAddr(t.to)}</td>
+      <td style="font-weight:600">${t.value}</td>
+      <td style="color:var(--cyan2)">${t.protocol}</td>
+      <td style="color:${t.flag==='Clean'?'var(--green)':'var(--amber)'}">${t.flag}</td>
+      <td style="color:var(--muted)">${t.time}</td>
+    </tr>`).join('');
+}
+
+function filterTx(type, btn) {
+  document.querySelectorAll('.tx-filters .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTxTable(type);
+}
+
+// ═══════════════════════════════
+// BLOCKCHAIN AUDIT LOG
+// ═══════════════════════════════
+function addBlockchainEntry() {
+  const feed   = document.getElementById('blockchainLog');
+  const types  = ['SWAP','LIQUIDITY_ADD','BORROW','REPAY','YIELD_HARVEST','BRIDGE','COLLATERAL'];
+  const protos = ['Aave V3','Uniswap V3','Compound','Curve','MakerDAO','dYdX'];
+  const statuses = ['ok','ok','ok','ok','warn'];
+  const t  = types[ri(0, types.length-1)];
+  const p  = protos[ri(0, protos.length-1)];
+  const s  = statuses[ri(0, statuses.length-1)];
+  const val = '$' + Math.floor(rand(100, 60000)).toLocaleString();
+  const cls = s==='ok' ? 'log-status-ok' : 'log-status-warn';
+  const sym = s==='ok' ? '✓' : '⚠';
+  const row = document.createElement('div');
+  row.className = 'log-entry';
+  row.innerHTML = `<span class="log-ts">${ts()}</span><span class="log-hash">${genHex(20).slice(0,14)}…</span><span class="log-action">${t}</span><span class="log-proto">${p}</span><span class="log-val">${val}</span><span class="${cls}">${sym}</span>`;
+  feed.insertBefore(row, feed.firstChild);
+  if (feed.children.length > 40) feed.removeChild(feed.lastChild);
+}
+
+// ═══════════════════════════════
+// AGENT LOG
+// ═══════════════════════════════
+function addLog(level, src, msg) {
+  const log = document.getElementById('agentLog');
+  const row = document.createElement('div');
+  row.className = 'log-row';
+  row.innerHTML = `<span class="lr-ts">${ts()}</span><span class="lr-lv LV-${level}">${level}</span><span class="lr-src">${src}</span><span class="lr-msg">${msg}</span>`;
+  log.insertBefore(row, log.firstChild);
+  if (log.children.length > 100) log.removeChild(log.lastChild);
+  agentLogs.push({t: ts(), level, src, msg});
+}
+
+function clearAgentLog() {
+  document.getElementById('agentLog').innerHTML = '';
+  agentLogs = [];
+}
+
+// ═══════════════════════════════
+// CHART HELPERS
+// ═══════════════════════════════
+function makeSparkData(len, base, vol) {
+  const d = [base];
+  for (let i = 1; i < len; i++) d.push(Math.max(0, d[i-1] + rand(-vol, vol)));
+  return d;
+}
+
+function makeLineChart(canvasId, data, color, labelText, height) {
+  const el = document.getElementById(canvasId);
+  if (!el) return null;
+  el.style.height = (height || 180) + 'px';
+  return new Chart(el, {
+    type: 'line',
+    data: {
+      labels: data.map((_,i) => i),
+      datasets: [{
+        label: labelText,
+        data: [...data],
+        borderColor: color,
+        borderWidth: 1.8,
+        fill: true,
+        backgroundColor: (ctx) => {
+          const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, height || 180);
+          g.addColorStop(0, color + '40');
+          g.addColorStop(1, color + '05');
+          return g;
+        },
+        tension: 0.4,
+        pointRadius: 0,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 0 },
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: { x: { display: false }, y: { display: false } }
+    }
+  });
+}
+
+// ═══════════════════════════════
+// CHART DATA ARRAYS
+// ═══════════════════════════════
+let ethSparkData = makeSparkData(60, ethPrice, 12);
+let btcSparkData = makeSparkData(60, btcPrice, 320);
+let netTpsData   = makeSparkData(60, 14, 4);
+let netAiData    = netTpsData.map(v => v * 0.65 + rand(-1, 1));
+let liqData      = makeSparkData(30, 42, 3);
+let tvlBarData   = Array.from({length:14}, (_,i) => 3.8 + rand(0, 0.8));
+
+function initAllCharts() {
+  // Dashboard market chart (multi-line)
+  const mCtx = document.getElementById('marketChart');
+  if (mCtx) {
+    marketChartRef = new Chart(mCtx, {
+      type: 'line',
+      data: {
+        labels: Array(60).fill(''),
+        datasets: [
+          { label:'ETH', data:[...ethSparkData], borderColor:'#00d2ff', borderWidth:1.8, fill:true, backgroundColor:'rgba(0,210,255,0.06)', tension:.4, pointRadius:0 },
+          { label:'BTC/100', data: btcSparkData.map(v=>v/100), borderColor:'#ffb300', borderWidth:1.5, fill:false, tension:.4, pointRadius:0 },
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false, animation:{duration:0},
+        plugins:{ legend:{display:true,labels:{color:'#3a6080',font:{size:9},boxWidth:10}} },
+        scales:{ x:{display:false}, y:{display:false} }
+      }
+    });
+  }
+
+  // Monitoring network chart
+  const nCtx = document.getElementById('networkActivityChart');
+  if (nCtx) {
+    networkChartRef = new Chart(nCtx, {
+      type:'line',
+      data:{
+        labels: Array(60).fill(''),
+        datasets:[
+          {label:'TPS', data:[...netTpsData], borderColor:'#00d2ff', borderWidth:1.5, fill:true, backgroundColor:'rgba(0,210,255,0.05)', tension:.3, pointRadius:0},
+          {label:'AI Ops/s', data:[...netAiData], borderColor:'#b47dff', borderWidth:1.5, fill:false, tension:.3, pointRadius:0},
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false, animation:{duration:300},
+        plugins:{legend:{display:true,labels:{color:'#3a6080',font:{size:9},boxWidth:10}}},
+        scales:{
+          x:{display:false},
+          y:{grid:{color:'rgba(0,210,255,0.05)'},ticks:{color:'#3a6080',font:{size:9}}}
+        }
+      }
+    });
+  }
+
+  initAnalyticsCharts();
+}
+
+function initAnalyticsCharts() {
+  if (!ethChartRef) {
+    const el = document.getElementById('ethLargeChart');
+    if (el) ethChartRef = new Chart(el, {
+      type:'line',
+      data:{labels:Array(60).fill(''),datasets:[{label:'ETH/USD',data:[...ethSparkData],borderColor:'#00d2ff',borderWidth:2,fill:true,backgroundColor:'rgba(0,210,255,0.06)',tension:.4,pointRadius:0}]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},plugins:{legend:{display:false}},scales:{x:{display:false},y:{grid:{color:'rgba(0,210,255,0.04)'},ticks:{color:'#3a6080',font:{size:9}}}}}
+    });
+  }
+  if (!btcChartRef) {
+    const el = document.getElementById('btcLargeChart');
+    if (el) btcChartRef = new Chart(el, {
+      type:'line',
+      data:{labels:Array(60).fill(''),datasets:[{label:'BTC/USD',data:[...btcSparkData],borderColor:'#ffb300',borderWidth:2,fill:true,backgroundColor:'rgba(255,179,0,0.05)',tension:.4,pointRadius:0}]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},plugins:{legend:{display:false}},scales:{x:{display:false},y:{grid:{color:'rgba(255,179,0,0.04)'},ticks:{color:'#3a6080',font:{size:9}}}}}
+    });
+  }
+  if (!tvlChartRef) {
+    const el = document.getElementById('tvlChart');
+    if (el) tvlChartRef = new Chart(el, {
+      type:'bar',
+      data:{
+        labels:['M','T','W','T','F','S','S','M','T','W','T','F','S','S'],
+        datasets:[{label:'TVL $B',data:[...tvlBarData],backgroundColor:'rgba(0,255,179,0.25)',borderColor:'#00ffb3',borderWidth:1,borderRadius:2}]
+      },
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#3a6080',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#3a6080',font:{size:9}},grid:{color:'rgba(0,210,255,0.04)'}}}}
+    });
+  }
+  if (!liqChartRef) {
+    const el = document.getElementById('liqChart');
+    if (el) liqChartRef = new Chart(el, {
+      type:'line',
+      data:{labels:Array(30).fill(''),datasets:[{label:'Risk Index',data:[...liqData],borderColor:'#ff3d5a',borderWidth:2,fill:true,backgroundColor:'rgba(255,61,90,0.06)',tension:.4,pointRadius:0}]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},plugins:{legend:{display:false}},scales:{x:{display:false},y:{grid:{color:'rgba(255,61,90,0.05)'},ticks:{color:'#3a6080',font:{size:9}}}}}
+    });
+  }
+}
+
+// ═══════════════════════════════
+// AGENT CONTROLS
+// ═══════════════════════════════
+function agentStart() {
+  if (agentRunning) { toast('Agent is already running','info'); return; }
+  agentRunning = true;
+  agentStartTime = Date.now() - (agentStartTime > 0 ? Date.now() - agentStartTime : 0);
+  setStateUI('active', 'AGENT RUNNING', 'var(--green)');
+  document.getElementById('monBadge').textContent = '● RUNNING';
+  document.getElementById('agentStatusLabel').textContent = 'AGENT ACTIVE';
+  toast('Agent started — monitoring all DeFi protocols', 'success');
+  addLog('OK','AGENT','Monitoring agent started — scanning all registered protocols');
+}
+
+function agentPause() {
+  if (!agentRunning) { toast('Agent is already paused','info'); return; }
+  agentRunning = false;
+  setStateUI('paused', 'AGENT PAUSED', 'var(--amber)');
+  document.getElementById('monBadge').textContent = '⏸ PAUSED';
+  document.getElementById('agentStatusLabel').textContent = 'AGENT PAUSED';
+  toast('Agent paused', 'info');
+  addLog('WARN','AGENT','Monitoring paused by user');
+}
+
+function agentReset() {
+  agentPause();
+  setTimeout(() => {
+    clearAgentLog();
+    setStateUI('idle', 'IDLE', 'var(--muted)');
+    document.getElementById('monBadge').textContent = '○ IDLE';
+    addLog('INFO','SYSTEM','Agent reset. DeFi Guardian v2.4 ready.');
+    toast('Agent reset complete', 'info');
+  }, 100);
+}
+
+function setStateUI(dot, label, color) {
+  const d = document.getElementById('stateIndicator');
+  const l = document.getElementById('stateLabel');
+  d.className = 'state-dot st-' + dot;
+  l.textContent = label;
+  l.style.color = color;
+}
+
+// ═══════════════════════════════
+// EXPORTS
+// ═══════════════════════════════
+function exportAgentLog() {
+  if (agentLogs.length === 0) { toast('No log entries to export','info'); return; }
+  const header = 'DeFi Guardian — Agent Execution Log\nExported: ' + new Date().toISOString() + '\n' + '='.repeat(70) + '\n';
+  const lines = agentLogs.map(l =>
+    `[${l.t}] [${l.level.padEnd(5)}] [${l.src.padEnd(14)}] ${l.msg}`
+  ).join('\n');
+  download('defi-guardian-log-' + Date.now() + '.txt', header + lines);
+  toast('Log exported (' + agentLogs.length + ' entries)', 'success');
+}
+
+function exportReport() {
+  const uptime = document.getElementById('agentUptime').textContent;
+  const aiAcc  = document.getElementById('aiAccDisplay').textContent;
+  const report = [
+    'DeFi Guardian — Monitoring Report',
+    'Generated: ' + new Date().toLocaleString(),
+    '='.repeat(60),
+    '',
+    'EXECUTIVE SUMMARY',
+    '─────────────────',
+    'Total Value Locked:    $4.28B',
+    'Active Alerts:         ' + ALERT_DATA.length + ' (' + ALERT_DATA.filter(a=>a.type==='critical').length + ' Critical)',
+    'AI Scans Completed:    ' + scanCount.toLocaleString(),
+    'Monitoring Uptime:     ' + uptime,
+    'Model Accuracy:        ' + aiAcc,
+    '',
+    'PROTOCOL STATUS',
+    '───────────────',
+    ...PROTOCOLS.map(p => p.name.padEnd(14) + ' TVL:' + p.tvl.padEnd(8) + ' APY:' + p.apy.padEnd(7) + ' Risk:' + p.risk.toUpperCase()),
+    '',
+    'ACTIVE ALERTS',
+    '─────────────',
+    ...ALERT_DATA.map((a,i) => `${i+1}. [${a.type.toUpperCase()}] ${a.title}\n   ${a.desc}\n   Protocol:${a.proto} | Block:#${a.block}`),
+    '',
+    'AGENT LOG (Last 15 Entries)',
+    '──────────────────────────',
+    ...agentLogs.slice(0,15).map(l => `[${l.t}] ${l.level} — ${l.src}: ${l.msg}`),
+    '',
+    '─'.repeat(60),
+    'DeFi Guardian v2.4 — Autonomous AI Monitoring Agent',
+    'Hackathon: Agentic AI x Blockchain — Challenge #1',
+  ].join('\n');
+  download('defi-guardian-report-' + Date.now() + '.txt', report);
+  toast('Report exported', 'success');
+}
+
+function download(filename, text) {
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([text], {type:'text/plain'})),
+    download: filename
+  });
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// ═══════════════════════════════
+// MAIN TICK — runs every 1000ms
+// ═══════════════════════════════
+const LOG_POOL = [
+  () => ['DATA','BLOCK_SCAN',  `Block #${blockHeight.toLocaleString()} scanned — ${ri(5,40)} DeFi events detected`],
+  () => ['INFO','PRICE_ORACLE',`ETH: $${ethPrice.toFixed(2)} | BTC: $${btcPrice.toFixed(0)} | Gas: ${ri(15,80)} Gwei`],
+  () => ['DATA','AI_MODEL',    `Inference batch complete — ${ri(100,999)} predictions, accuracy ${rand(92,97).toFixed(1)}%`],
+  () => ['INFO','MEMPOOL',     `${ri(1000,6000).toLocaleString()} pending txns scanned for MEV opportunities`],
+  () => ['OK','AAVE_V3',       'Health factors nominal — 0 positions in critical liquidation zone'],
+  () => ['OK','UNISWAP_V3',    'Pool fee revenue within normal range — no anomalies'],
+  () => ['WARN','WATCHDOG',    `Position health factor below 1.5 — monitoring CDP #${ri(1000,9999)}`],
+  () => ['DATA','RISK_ENGINE', `Risk scan complete — ${ri(2,6)} positions flagged for review`],
+  () => ['OK','CURVE',         `Yield rebalance executed — APY improvement +${rand(0.1,1.5).toFixed(1)}%`],
+];
+
+function tick() {
+  tickCount++;
+
+  // Block height (every ~12 ticks)
+  if (tickCount % 12 === 0) blockHeight++;
+  document.getElementById('liveBlock').textContent    = blockHeight.toLocaleString();
+  document.getElementById('monBlock').textContent     = blockHeight.toLocaleString();
+
+  // Agent uptime
+  const up = Math.floor((Date.now() - agentStartTime) / 1000);
+  const h = Math.floor(up/3600), m = Math.floor((up%3600)/60), s = up%60;
+  document.getElementById('agentUptime').textContent = [h,m,s].map(x=>String(x).padStart(2,'0')).join(':');
+
+  if (!agentRunning) return; // don't update data metrics if paused
+
+  // Scan counter
+  scanCount += ri(2, 8);
+  document.getElementById('m-scans').textContent  = scanCount.toLocaleString();
+  document.getElementById('eventsMin').textContent = ri(80, 210);
+  document.getElementById('aiAccDisplay').textContent = rand(92,97).toFixed(1) + '%';
+  document.getElementById('txWatched').textContent = ri(2000,5000).toLocaleString();
+  document.getElementById('gasOracle').textContent = ri(14,90) + ' Gwei';
+
+  // Price updates
+  ethPrice = Math.max(2800, ethPrice + rand(-9, 11));
+  btcPrice = Math.max(55000, btcPrice + rand(-220, 260));
+
+  document.getElementById('anEth').textContent = '$' + ethPrice.toFixed(0);
+  document.getElementById('anBtc').textContent = '$' + btcPrice.toFixed(0);
+  document.getElementById('anGas').textContent = ri(14, 90);
+  document.getElementById('anFG').textContent  = ri(48, 88);
+
+  // Push to chart data arrays
+  ethSparkData.push(ethPrice); ethSparkData.shift();
+  btcSparkData.push(btcPrice); btcSparkData.shift();
+
+  // Update market chart
+  if (marketChartRef) {
+    marketChartRef.data.datasets[0].data.push(ethPrice);
+    marketChartRef.data.datasets[0].data.shift();
+    marketChartRef.data.datasets[1].data.push(btcPrice/100);
+    marketChartRef.data.datasets[1].data.shift();
+    marketChartRef.update('none');
+  }
+
+  // Update analytics charts
+  if (ethChartRef) { ethChartRef.data.datasets[0].data.push(ethPrice); ethChartRef.data.datasets[0].data.shift(); ethChartRef.update('none'); }
+  if (btcChartRef) { btcChartRef.data.datasets[0].data.push(btcPrice); btcChartRef.data.datasets[0].data.shift(); btcChartRef.update('none'); }
+
+  // Network chart (every 2 ticks)
+  if (tickCount % 2 === 0 && networkChartRef) {
+    const nv = rand(5, 30);
+    netTpsData.push(nv); netTpsData.shift();
+    netAiData.push(nv * 0.65 + rand(-1.5, 1.5)); netAiData.shift();
+    networkChartRef.data.datasets[0].data.push(nv); networkChartRef.data.datasets[0].data.shift();
+    networkChartRef.data.datasets[1].data.push(nv * 0.65 + rand(-1.5, 1.5)); networkChartRef.data.datasets[1].data.shift();
+    networkChartRef.update('none');
+  }
+
+  // Liquidation chart (every 3 ticks)
+  if (tickCount % 3 === 0 && liqChartRef) {
+    const lv = Math.max(10, liqData[liqData.length-1] + rand(-2.5, 2.5));
+    liqData.push(lv); liqData.shift();
+    liqChartRef.data.datasets[0].data.push(lv); liqChartRef.data.datasets[0].data.shift();
+    liqChartRef.update('none');
+  }
+
+  // Agent log (every 4 ticks)
+  if (tickCount % 4 === 0) {
+    const entry = LOG_POOL[ri(0, LOG_POOL.length-1)]();
+    addLog(entry[0], entry[1], entry[2]);
+  }
+
+  // Blockchain audit log (every 2 ticks)
+  if (tickCount % 2 === 0) addBlockchainEntry();
+
+  // New transactions (every 3 ticks)
+  if (tickCount % 3 === 0) {
+    allTxns.unshift(...generateTxns(2));
+    if (allTxns.length > 250) allTxns.length = 250;
+    renderTxTable();
+  }
+
+  // Live alert every 25 ticks
+  if (tickCount % 25 === 0) {
+    const pool = [
+      {type:'warning', icon:'🟡', title:'Gas Spike Alert',            desc:`Gas rose to ${ri(80,200)} Gwei. Pausing non-urgent operations.`,              proto:'Ethereum', tags:['Gas','Network']},
+      {type:'info',    icon:'🔵', title:'New High-Yield Pool Found',  desc:`Curve pool offering ${rand(15,45).toFixed(1)}% APY. AI confidence: 87%.`,     proto:'Curve',    tags:['Yield','Opportunity']},
+      {type:'success', icon:'🟢', title:'Arbitrage Window Detected',  desc:`ETH price delta $${rand(5,50).toFixed(2)} across chains. Flash loan viable.`, proto:'Bridge',   tags:['Arbitrage','ETH']},
+      {type:'critical',icon:'🔴', title:'Liquidation Imminent',       desc:`Position #${ri(1000,9999)} HF dropped to 1.0${ri(1,9)}. Immediate action required.`, proto:'Aave V3', tags:['Liquidation','Critical']},
+    ];
+    const a = pool[ri(0, pool.length-1)];
+    ALERT_DATA.unshift({...a, block: blockHeight.toLocaleString(), time: 'just now'});
+    if (ALERT_DATA.length > 25) ALERT_DATA.pop();
+
+    newAlertCount++;
+    document.getElementById('alertBadge').textContent     = newAlertCount;
+    document.getElementById('alertBadge').style.display   = 'flex';
+    document.getElementById('m-alerts').textContent       = ALERT_DATA.filter(x=>x.type==='critical'||x.type==='warning').length;
+    renderAlertFeed();
+    renderAlertsPage();
+    toast(`🚨 ${a.title}`, a.type === 'critical' ? 'alert' : 'info');
+  }
+}
+
+// Dashboard clock
+function updateClock() {
+  const el = document.getElementById('dashTime');
+  if (el) el.textContent = new Date().toLocaleString('en-US',{
+    hour12:false, year:'numeric', month:'short', day:'2-digit',
+    hour:'2-digit', minute:'2-digit', second:'2-digit'
+  });
+}
+
+// ═══════════════════════════════
+// INIT
+// ═══════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  // Seed initial data
+  allTxns = generateTxns(80);
+
+  // Initial renders
+  renderProtocolTable();
+  renderProtocolCards();
+  renderAlertFeed();
+  renderAlertsPage('all');
+  renderTxTable('all');
+
+  // Charts after brief delay (ensure DOM is ready)
+  setTimeout(initAllCharts, 80);
+
+  // Initial agent logs
+  setTimeout(() => {
+    addLog('INFO','SYSTEM',   'DeFi Guardian Agent v2.4 initialized');
+    addLog('OK','PROTOCOLS',  'All 6 DeFi protocols registered for monitoring');
+    addLog('DATA','AI_MODEL', 'Transformer model loaded — 94.7% baseline accuracy');
+    addLog('INFO','BLOCK_SCAN','Starting from block #' + blockHeight.toLocaleString());
+    addLog('ALERT','WATCHDOG','3 positions flagged for liquidation risk monitoring');
+    addLog('OK','GAS_ORACLE', 'Gas oracle connected — current: 28 Gwei');
+    addLog('OK','WALLET',     'Awaiting wallet connection for user-specific monitoring');
+  }, 150);
+
+  // Start live intervals
+  setInterval(tick, 1000);
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // Welcome toast
+  setTimeout(() => toast('🛡 DeFi Guardian Online — All systems nominal', 'success'), 800);
+});
+</script>
+</body>
+</html>
